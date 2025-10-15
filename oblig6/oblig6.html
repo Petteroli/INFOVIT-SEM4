@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        #weather-chart {
+            width: 800px;
+            height: 400px;
+            background-color: #f0f4f8; 
+            border: 1px solid #ced4da; 
+            border-radius: 8px;
+            margin: 20px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .grid line {
+            stroke: #e0e0e0; 
+            stroke-opacity: 0.7;
+            shape-rendering: crispEdges;
+        }
+        .grid path {
+            stroke-width: 0;
+        }
+        .weather-icon {
+            font-size: 24px; 
+        }
+        .sun {
+            fill: #ffc107; 
+            stroke: #ff9800;
+        }
+        .rain {
+            fill: #03a9f4; 
+            stroke: #0288d1;
+        }
+        .cloud {
+          fill: #90a4ae;
+          stroke: #78909c;
+        }
+        .snow{
+            fill: #ffffff;
+            stroke: #b0bec5;
+        }
+        .wind{
+            fill: #81c784;
+            stroke:#66bb6a;
+        }
+        .fog{
+            fill:#bcaaa4;
+            stroke:#a1887f;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Roboto', sans-serif;
+      }
+    </style>
+</head>
+<body>
+    <div id="weather-chart"></div>
+    <script>
+    d3.csv("sampledata.csv")
+        .then(function(data) {
+            console.log("Data loaded:", data);
+
+            const width = 800;
+            const height = 400;
+            const margin = { top: 20, right: 30, bottom: 50, left: 50 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+             
+
+            const svg = d3.select("#weather-chart")
+                            .append("svg")
+                            .attr("width", width)
+                            .attr("height", height);
+
+            const xScale = d3.scaleTime()
+                            .domain(d3.extent(data, d => new Date(d.Date + ' ' + d.Time)))
+                            .range([0, innerWidth]);
+
+            const yScale = d3.scaleLinear()
+                            .domain([0, 16]) 
+                            .range([innerHeight, 0]); 
+
+            const xAxis = d3.axisBottom(xScale)
+                .tickFormat(d3.timeFormat("%H:%M"))
+                .tickSizeInner(-innerHeight); 
+
+            const yAxis = d3.axisLeft(yScale)
+                .tickSizeInner(-innerWidth);   
+
+            const g = svg.append("g")
+                        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            g.append("g")
+                .attr("class", "grid")
+                .call(xAxis);
+
+            g.append("g")
+                .attr("class", "grid")
+                .call(yAxis);
+
+            g.append("g")
+            .attr("transform", `translate(0,${innerHeight})`)
+            .call(xAxis);
+
+            g.append("g")
+            .call(yAxis)
+            .append("text")
+            .attr("fill", "currentColor")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", "0.71em")
+            .attr("text-anchor", "end")
+            .text("Temperature (°C)");
+
+            g.append("text")
+            .attr("fill", "currentColor")
+            .attr("x", innerWidth / 2)
+            .attr("y", innerHeight + margin.bottom - 5)
+            .attr("text-anchor", "middle")
+            .text("Time");
+
+            //Weather icons
+            g.selectAll(".weather-icon")
+            .data(data)
+            .enter()
+            .append("g")
+            .attr("class", "weather-icon")
+            .attr("transform", d => `translate(${xScale(new Date(d.Date + ' ' + d.Time)) -12}, ${yScale(parseFloat(d.Temperature)) + 8})`)
+            .each(function(d) {
+                const precipitation = parseFloat(d.Precipitation);
+                const iconGroup = d3.select(this);
+                const time = parseInt(d.Time.split(":")[0],10);
+                //DAY
+                if (time < 20) {
+                    if (precipitation > 1.0) {
+                        iconGroup.append("text")
+                            .text("🌧️")
+                            .attr("class", "rain");
+                    } else if (precipitation > 0.2) {
+                        iconGroup.append("text")
+                            .text("🌦️")
+                            .attr("class", "rain");
+                    }
+                    else if (precipitation > 0) {
+                        iconGroup.append("text")
+                            .text("☁️")
+                            .attr("class", "cloud");
+                    }
+                    else {
+                        iconGroup.append("text")
+                            .text("☀️")
+                            .attr("class", "sun");
+                    }
+                }
+                //NIGHT
+                else {
+                    if (precipitation > 1.0) {
+                        iconGroup.append("text")
+                            .text("🌧️")
+                            .attr("class", "rain");
+                    } else if (precipitation > 0.2) {
+                        iconGroup.append("image")
+                            .attr("href", "nightRain.svg") 
+                            .attr("width", 20)
+                            .attr("height", 20)
+                            .attr("class", "rain");
+                    }
+                    else if (precipitation > 0) {
+                        iconGroup.append("image")
+                            .attr("href", "nightCloud.svg") 
+                            .attr("width", 20)
+                            .attr("height", 20)
+                            .attr("class", "cloud")
+                    }
+                    else {
+                        iconGroup.append("image")
+                            .attr("href", "moon.svg") 
+                            .attr("width", 20)
+                            .attr("height", 20)
+                            .attr("class", "sun");
+                    }
+                }
+            });
+        })
+        .catch(function(error) {
+            console.error("Error loading the CSV:", error);
+        });
+    </script>
+</body>
+</html>
